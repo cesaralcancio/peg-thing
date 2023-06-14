@@ -227,4 +227,120 @@
   [board]
   (doseq [row-num (range 1 (inc (:rows board)))]
     (println (render-row board row-num))))
+
 (print-board my-board)
+
+(defn letter->pos
+  "Converts a letter string to the corresponding position number"
+  [letter]
+  (inc (- (int (first letter)) alpha-start)))
+
+(defn get-input
+  "Waits for user to enter text and hit enter,
+  then cleans the input"
+  ([] (get-input nil))
+  ([default]
+   (let [input (s/trim (read-line))]
+     (if (empty? input)
+       default
+       (s/lower-case input)))))
+
+(defn characters-as-strings
+  "Given a string, return a collection consisting of each indivisual character"
+  [string]
+  (re-seq #"[a-zA-Z]" string))
+(characters-as-strings "a b")
+(characters-as-strings "a    cb")
+
+(defn user-entered-invalid-move
+  "Handles the next step after a user has entered an invalid move"
+  [board]
+  (println "\n!!! That was an invalid move :(\n")
+  (prompt-move board))
+
+(defn prompt-empty-peg [board]
+  (println "Here's your board:")
+  (print-board board)
+  (println "Remove which peg? [e]")
+  (prompt-move (remove-peg board (letter->pos (get-input "e")))))
+
+(defn prompt-rows []
+  (println "How many rows? [5]")
+  (let [rows (Integer. (get-input 5))
+        board (new-board rows)]
+    (prompt-empty-peg board)))
+
+(defn game-over
+  "Announce the game is over and prompt to play again"
+  [board]
+  (let [remaining-pegs (count (filter :pegged (vals board)))]
+    (println "Game over! You had" remaining-pegs "pegs left:")
+    (print-board board)
+    (println "Play again? y/n [y]")
+    (let [input (get-input "y")]
+      (if (= "y" input)
+        (prompt-rows)
+        (do
+          (println "Bye!")
+          (System/exit 0))))))
+
+(defn user-entered-valid-move
+  "Handles the next step after a user has entered a valid move"
+  [board]
+  (if (can-move? board)
+    (prompt-move board)
+    (game-over board)))
+
+(defn prompt-move
+  [board]
+  (println "\nHere's your board:")
+  (print-board board)
+  (println "Move from where to where? Enter two letters:")
+  (let [input (map letter->pos (characters-as-strings (get-input)))]
+    (if-let [new-board (make-move board (first input) (second input))]
+      (user-entered-valid-move new-board)
+      (user-entered-invalid-move board))))
+
+; (prompt-rows)
+
+; book exercises
+((comp #(+ 1 %) #(+ 1 %)) 1)
+((partial #(+ 1 %1 %2) 1) 1)
+(assoc-in {:a {:a1 {:a11  "a11"
+                    :a112 "a112"}
+               :a2 {:a221 "a221"}}
+           :b {:b1 {:b11 "b11"}}}
+          [:a :a2 :a22] "a22")
+
+(assoc-in {:a {:a1 {:a11 "a11"}}
+           :b {:b1 {:b11 "b11"}}}
+          [:c :c2 :c22] "c22")
+
+(defn my-assoc-in
+  [m [k & ks] v]
+  (let [reversed (reverse (conj ks k))                      ; add all keys and reverse, so we can reduce it from inside to outside
+        temp {}                                             ; build up the new map
+        [pqp _] (reduce (fn [[value position] key]          ; we need the position, so we can merge with existing values
+                          (let [result (if (nil? position)
+                                    (vector (assoc temp key value)
+                                            (conj ks k))
+                                    (let [dropped (drop-last position)
+                                          current-value (get-in m dropped)
+                                          merged-values (merge current-value value)]
+                                      (vector (assoc temp key merged-values)
+                                              dropped)))]
+                            result))
+                        [v nil]
+                        reversed)]
+    (merge m pqp)))
+
+(my-assoc-in {:a {:a1 {:a11 "a11"}}
+              :b {:b1 {:b11 "b11"}}}
+             [:a :a2 :a22] "a22")
+
+(my-assoc-in {:a {:a1 {:a11 "a11"}
+                  :a2 {:a22x "a22x"}}
+              :b {:b1 {:b11 "b11"}}}
+             [:a :a2 :a22] "a22")
+
+(assoc {:a "b"} :b "b")

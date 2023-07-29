@@ -9,3 +9,4 @@
   [locations]
   (clojure.string/join " " (map latlng->point locations)))
 
+(println "I was required!")
